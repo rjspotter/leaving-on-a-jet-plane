@@ -1,0 +1,51 @@
+version: '3'
+volumes:
+  file-data:
+  pgdata:
+  nifi:
+  omnidb:
+services:
+  volumes-provisioner:
+    image: hasnat/volumes-provisioner
+    environment:
+      PROVISION_DIRECTORIES: "0:0:0777:/data;0:0:0777:/nifi"
+    volumes:
+      - file-data/:/data
+      - nifi:/nifi
+    network_mode: none
+  nifi:
+    hostname: nifi
+    container_name: nifi
+    build: ./nifi
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+      - "10000:10000"
+    volumes:
+      - file-data/:/data
+  zookeeper:
+    hostname: zookeeper
+    container_name: zookeeper
+    image: 'bitnami/zookeeper:latest'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+  omnidb:
+    hostname: omnidb
+    container_name: omnidb
+    image: 'taivokasper/omnidb:latest'
+    ports:
+      - "8081:8080"
+      - "25482:25482"
+    volumes:
+      - omnidb:/etc/omnidb
+  postgres:
+    hostname: postgres
+    container_name: postgres
+    image: postgres:11.5
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: simple
