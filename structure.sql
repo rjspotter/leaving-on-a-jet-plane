@@ -25,37 +25,37 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 */
 CREATE TABLE public.flights (
-  TRANSACTIONID int NOT NULL,
-  FLIGHTDATE integer,
-  AIRLINECODE character varying,
-  AIRLINENAME character varying,
-  TAILNUM character varying,
-  FLIGHTNUM integer,
-  ORIGINAIRPORTCODE character varying,
-  ORIGAIRPORTNAME character varying,
-  ORIGINCITYNAME character varying,
-  ORIGINSTATE character varying,
-  ORIGINSTATENAME character varying,
-  DESTAIRPORTCODE character varying,
-  DESTAIRPORTNAME character varying,
-  DESTCITYNAME character varying,
-  DESTSTATE character varying,
-  DESTSTATENAME character varying,
-  CRSDEPTIME integer,
-  DEPTIME integer,
-  DEPDELAY integer,
-  TAXIOUT integer,
-  WHEELSOFF integer,
-  WHEELSON integer,
-  TAXIIN integer,
-  CRSARRTIME integer,
-  ARRTIME integer,
-  ARRDELAY integer,
-  CRSELAPSEDTIME integer,
-  ACTUALELAPSEDTIME integer,
-  CANCELLED  character varying,
-  DIVERTED character varying,
-  DISTANCE character varying
+  TRANSACTIONID INT NOT NULL,
+  FLIGHTDATE INTEGER,
+  AIRLINECODE CHARACTER VARYING,
+  AIRLINENAME CHARACTER VARYING,
+  TAILNUM CHARACTER VARYING,
+  FLIGHTNUM INTEGER,
+  ORIGINAIRPORTCODE CHARACTER VARYING,
+  ORIGAIRPORTNAME CHARACTER VARYING,
+  ORIGINCITYNAME CHARACTER VARYING,
+  ORIGINSTATE CHARACTER VARYING,
+  ORIGINSTATENAME CHARACTER VARYING,
+  DESTAIRPORTCODE CHARACTER VARYING,
+  DESTAIRPORTNAME CHARACTER VARYING,
+  DESTCITYNAME CHARACTER VARYING,
+  DESTSTATE CHARACTER VARYING,
+  DESTSTATENAME CHARACTER VARYING,
+  CRSDEPTIME INTEGER,
+  DEPTIME INTEGER,
+  DEPDELAY INTEGER,
+  TAXIOUT INTEGER,
+  WHEELSOFF INTEGER,
+  WHEELSON INTEGER,
+  TAXIIN INTEGER,
+  CRSARRTIME INTEGER,
+  ARRTIME INTEGER,
+  ARRDELAY INTEGER,
+  CRSELAPSEDTIME INTEGER,
+  ACTUALELAPSEDTIME INTEGER,
+  CANCELLED  CHARACTER VARYING,
+  DIVERTED CHARACTER VARYING,
+  DISTANCE CHARACTER VARYING
 );
 ALTER TABLE ONLY public.flights ADD CONSTRAINT flights_pkey PRIMARY KEY (TRANSACTIONID);
 
@@ -68,14 +68,14 @@ CREATE SEQUENCE public.airlines_id_seq
     CACHE 1;
 
 CREATE TABLE public.airlines (
-  id integer not null default nextval('airlines_id_seq'),
-  code character varying NOT NULL,
-  description character varying NOT NULL
+  id INTEGER NOT NULL DEFAULT nextval('airlines_id_seq'),
+  code CHARACTER VARYING NOT NULL,
+  description CHARACTER VARYING NOT NULL
 );
 
 ALTER TABLE ONLY public.airlines ADD CONSTRAINT airlines_pkey PRIMARY KEY (id);
 
-insert into public.airlines (code, description) select distinct AIRLINECODE, AIRLINENAME from public.flights;
+INSERT INTO public.airlines (code, description) SELECT DISTINCT AIRLINECODE, AIRLINENAME FROM public.flights;
 
 
 -- Planes
@@ -88,23 +88,23 @@ CREATE SEQUENCE public.planes_id_seq
     CACHE 1;
 
 CREATE TABLE public.planes (
-  id integer not null default nextval('planes_id_seq'),
-  tail_number character varying NOT NULL UNIQUE,
-  valid boolean not null default true
+  id INTEGER NOT NULL DEFAULT nextval('planes_id_seq'),
+  tail_number CHARACTER VARYING NOT NULL UNIQUE,
+  valid BOOLEAN NOT NULL DEFAULT TRUE
 );
 ALTER TABLE ONLY public.planes ADD CONSTRAINT planes_pkey PRIMARY KEY (id);
 
-insert into public.planes (tail_number)
-select distinct REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1')
-from flights where REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1') is not null;
+INSERT INTO public.planes (tail_number)
+SELECT DISTINCT REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1')
+FROM flights WHERE REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1') IS NOT NULL;
 
 -- Flights Cleaned
 
 CREATE TABLE public.flights_cleaned (
-  TRANSACTIONID int NOT NULL,
-  FLIGHTDATE date,
-  airline_id integer NOT NULL,
-  plane_id integer
+  TRANSACTIONID INT NOT NULL,
+  FLIGHTDATE DATE,
+  airline_id INTEGER NOT NULL,
+  plane_id INTEGER
 );
 
 ALTER TABLE ONLY public.flights_cleaned
@@ -114,11 +114,13 @@ ALTER TABLE ONLY public.flights_cleaned
 ADD CONSTRAINT fk_flights_cleaned_plane FOREIGN KEY (plane_id) REFERENCES public.planes(id);
 
 
-insert into flights_cleaned SELECT
-    TRANSACTIONID,
-    TO_DATE(CAST(FLIGHTDATE as varchar), 'YYYYMMDD'),
-    airlines.id,
-    planes.id
-  from public.flights
-  left outer join public.airlines on public.flights.AIRLINECODE = public.airlines.CODE
-  left outer join public.planes on REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1') = planes.tail_number;
+INSERT INTO flights_cleaned
+SELECT
+  TRANSACTIONID,
+  TO_DATE(CAST(FLIGHTDATE AS VARCHAR), 'YYYYMMDD'),
+  airlines.id,
+  planes.id
+FROM
+  public.flights
+  LEFT OUTER JOIN public.airlines ON public.flights.AIRLINECODE = public.airlines.CODE
+  LEFT OUTER JOIN public.planes ON REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1') = planes.tail_number;
