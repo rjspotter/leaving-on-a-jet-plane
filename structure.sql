@@ -70,12 +70,23 @@ CREATE SEQUENCE public.airlines_id_seq
 CREATE TABLE public.airlines (
   id INTEGER NOT NULL DEFAULT nextval('airlines_id_seq'),
   code CHARACTER VARYING NOT NULL,
-  description CHARACTER VARYING NOT NULL
+  description CHARACTER VARYING NOT NULL,
+  notes CHARACTER VARYING
 );
 
 ALTER TABLE ONLY public.airlines ADD CONSTRAINT airlines_pkey PRIMARY KEY (id);
 
-INSERT INTO public.airlines (code, description) SELECT DISTINCT AIRLINECODE, AIRLINENAME FROM public.flights;
+INSERT
+  INTO public.airlines (
+  code,
+  description,
+  notes)
+SELECT
+  DISTINCT AIRLINECODE,
+  SPLIT_PART(AIRLINENAME, CONCAT(': ', AIRLINECODE), '1'),
+  SPLIT_PART(AIRLINENAME, CONCAT(': ', AIRLINECODE), '2')
+FROM
+  public.flights;
 
 
 -- Planes
