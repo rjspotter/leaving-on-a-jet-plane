@@ -168,59 +168,6 @@ WHERE
       DISTINCT code FROM airports)
 ;
 
--- Flight Designations https://en.wikipedia.org/wiki/Flight_number
-
-CREATE SEQUENCE public.flight_designations_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-CREATE TABLE public.flight_designations (
-  id INTEGER NOT NULL DEFAULT nextval('flight_designations_id_seq'),
-  airline_id INTEGER NOT NULL,
-  flight_number INTEGER NOT NULL,
-  origin_id INTEGER NOT NULL,
-  destination_id INTEGER NOT NULL,
-  crsdeptime TIME WITHOUT TIME ZONE NOT NULL,
-  crsarrtime TIME WITHOUT TIME ZONE NOT NULL,
-  crselapsedtime INTEGER
-);
-ALTER TABLE ONLY public.flight_designations ADD CONSTRAINT flight_designations_pkey PRIMARY KEY (id);
-
-INSERT INTO flight_designations(
-  airline_id,
-  flight_number,
-  origin_id,
-  destination_id,
-  crsdeptime,
-  crsarrtime,
-  crselapsedtime)
-SELECT
-  airlines.id,
-  flights.FLIGHTNUM,
-  origin.id,
-  destination.id,
-  CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  crselapsedtime
-FROM
-  public.flights
-  LEFT OUTER JOIN public.airlines ON public.flights.AIRLINECODE = public.airlines.CODE
-  LEFT OUTER JOIN airports AS origin ON origin.code = flights.originairportcode
-  LEFT OUTER JOIN airports AS destination ON destination.code = flights.destairportcode
-GROUP BY
-  airlines.id,
-  flights.FLIGHTNUM,
-  origin.id,
-  destination.id,
-  CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  crselapsedtime
-;
-
-
 -- Flights Cleaned
 
 CREATE TABLE public.flights_cleaned (
