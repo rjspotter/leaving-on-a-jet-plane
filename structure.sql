@@ -122,16 +122,16 @@ CREATE TABLE public.airports (
   id INTEGER NOT NULL DEFAULT nextval('airports_id_seq'),
   code CHARACTER VARYING NOT NULL UNIQUE,
   name CHARACTER VARYING NOT NULL,
-  city CHARACTER VARYING NOT NULL,
-  STATE CHARACTER VARYING NOT NULL,
-  state_name CHARACTER VARYING NOT NULL
+  city CHARACTER VARYING,
+  STATE CHARACTER VARYING,
+  state_name CHARACTER VARYING
 );
 ALTER TABLE ONLY public.airports ADD CONSTRAINT airports_pkey PRIMARY KEY (id);
 
 INSERT
  INTO public.airports(
  code,
- NAME,
+ "name",
  city,
  STATE,
  state_name
@@ -140,7 +140,7 @@ SELECT
  DISTINCT originairportcode,
  SPLIT_PART(origairportname, ': ', '2'),
  origincityname,
- originstate
+ originstate,
  originstatename
 FROM
   flights
@@ -158,7 +158,7 @@ SELECT
  DISTINCT destairportcode,
  SPLIT_PART(destairportname, ': ', '2'),
  destcityname,
- deststate
+ deststate,
  deststatename
 FROM
   flights
@@ -172,15 +172,28 @@ WHERE
 
 CREATE TABLE public.flights_cleaned (
   TRANSACTIONID INT NOT NULL,
-  FLIGHTDATE DATE,
+  FLIGHTDATE DATE NOT NULL,
   airline_id INTEGER NOT NULL,
   plane_id INTEGER,
-  flightnumber INTEGER,
-  origin_id INTEGER,
-  destination_id INTEGER,
-  crsdeptime TIME WITHOUT TIME ZONE,
+  flightnumber INTEGER NOT NULL,
+  origin_id INTEGER NOT NULL,
+  destination_id INTEGER NOT NULL,
+  crsdeptime TIME WITHOUT TIME ZONE NOT NULL,
   deptime TIME WITHOUT TIME ZONE,
   depdelay INTEGER,
+  taxiout INTEGER,
+  wheelsoff TIME WITHOUT TIME ZONE,
+  wheelson TIME WITHOUT TIME ZONE,
+  taxiin INTEGER,
+  crsarrtime TIME WITHOUT TIME ZONE NOT NULL,
+  arrtime TIME WITHOUT TIME ZONE,
+  arrdelay INTEGER,
+  crselapsedtime INTEGER,
+  actualelapsedtime INTEGER,
+  cancelled BOOLEAN NOT NULL,
+  diverted BOOLEAN NOT NULL,
+  distance INTEGER NOT NULL,
+  distance_unit VARCHAR NOT NULL
 );
 
 ALTER TABLE ONLY public.flights_cleaned
@@ -189,10 +202,38 @@ ADD CONSTRAINT fk_flights_cleaned_airline FOREIGN KEY (airline_id) REFERENCES pu
 ALTER TABLE ONLY public.flights_cleaned
 ADD CONSTRAINT fk_flights_cleaned_plane FOREIGN KEY (plane_id) REFERENCES public.planes(id);
 
+ALTER TABLE ONLY public.flights_cleaned
+ADD CONSTRAINT fk_flights_cleaned_origin FOREIGN KEY (origin_id) REFERENCES public.airports(id);
 
-INSERT INTO flights_cleaned
+ALTER TABLE ONLY public.flights_cleaned
+ADD CONSTRAINT fk_flights_cleaned_destination FOREIGN KEY (destination_id) REFERENCES public.airports(id);
+
+INSERT INTO flights_cleaned(
+  TRANSACTIONID,
+  FLIGHTDATE,
+  airline_id,
+  plane_id,
+  flightnumber,
+  origin_id,
+  destination_id,
+  crsdeptime,
+  deptime,
+  depdelay,
+  taxiout,
+  wheelsoff,
+  wheelson,
+  taxiin,
+  crsarrtime,
+  arrtime,
+  arrdelay,
+  crselapsedtime,
+  actualelapsedtime,
+  cancelled,
+  diverted,
+  distance,
+  distance_unit)
 SELECT
-  flights.TRANSACTIONID,
+  TRANSACTIONID,
   TO_DATE(CAST(FLIGHTDATE AS VARCHAR), 'YYYYMMDD'),
   airlines.id,
   planes.id,
@@ -201,12 +242,70 @@ SELECT
   destination.id,
   CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
   CAST( replace( CAST( round( (deptime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  depdelay
+  depdelay,
+  taxiout,
+  CAST( replace( CAST( round( (wheelsoff / 100.0), 2) AS TEXT), '.', ':') AS TIME),
+  CAST( replace( CAST( round( (wheelson / 100.0), 2) AS TEXT), '.', ':') AS TIME),
+  taxiin,
+  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
+  CAST( replace( CAST( round( (arrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
+  arrdelay,
+  crselapsedtime,
+  actualelapsedtime,
+  CAST(cancelled AS boolean),
+  CAST(diverted AS BOOLEAN),
+  CAST(SPLIT_PART(distance, ' ', '1') AS INTEGER),
+  SPLIT_PART(distance, ' ', '2')
 FROM
   public.flights
   LEFT OUTER JOIN public.airlines ON public.flights.AIRLINECODE = public.airlines.CODE
   LEFT OUTER JOIN public.planes ON REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1') = planes.tail_number
   LEFT OUTER JOIN airports AS origin ON origin.code = flights.originairportcode
   LEFT OUTER JOIN airports AS destination ON destination.code = flights.destairportcode
+WHERE
+  CAST(cancelled AS BOOLEAN) IS FALSE
+;
+
+
+INSERT INTO flights_cleaned(
+  TRANSACTIONID,
+  FLIGHTDATE,
+  airline_id,
+  plane_id,
+  flightnumber,
+  origin_id,
+  destination_id,
+  crsdeptime,
+  crsarrtime,
+  arrdelay,
+  crselapsedtime,
+  cancelled,
+  diverted,
+  distance,
+  distance_unit)
+SELECT
+  TRANSACTIONID,
+  TO_DATE(CAST(FLIGHTDATE AS VARCHAR), 'YYYYMMDD'),
+  airlines.id,
+  planes.id,
+  flights.FLIGHTNUM,
+  origin.id,
+  destination.id,
+  CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
+  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
+  arrdelay,
+  crselapsedtime,
+  CAST(cancelled AS boolean),
+  CAST(diverted AS BOOLEAN),
+  CAST(SPLIT_PART(distance, ' ', '1') AS INTEGER),
+  SPLIT_PART(distance, ' ', '2')
+FROM
+  public.flights
+  LEFT OUTER JOIN public.airlines ON public.flights.AIRLINECODE = public.airlines.CODE
+  LEFT OUTER JOIN public.planes ON REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1') = planes.tail_number
+  LEFT OUTER JOIN airports AS origin ON origin.code = flights.originairportcode
+  LEFT OUTER JOIN airports AS destination ON destination.code = flights.destairportcode
+WHERE
+  CAST(cancelled AS BOOLEAN) IS true
 ;
 
