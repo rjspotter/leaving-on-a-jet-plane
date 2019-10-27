@@ -1,5 +1,6 @@
 not all the tail numbers are valid
 removed the N because all FAA tail numbers start with N (in fact they're called N codes)
+I auto-removed any non-valid characters
 
 Flight Designations are mutable https://en.wikipedia.org/wiki/Flight_number
 I looked at breaking them out but there are 926327 distinct on AIRLINECODE, FLIGHTNUM, ORIGINAIRPORTCODE, DESTAIRPORTCODE, CRSDEPTIME, CRSARRTIME, CRSELAPSEDTIME out of 1191805 77.6%

@@ -196,6 +196,8 @@ CREATE TABLE public.flights_cleaned (
   distance_unit VARCHAR NOT NULL
 );
 
+ALTER TABLE ONLY public.flights_cleaned ADD CONSTRAINT flights_cleaned_pkey PRIMARY KEY (transactionid);
+
 ALTER TABLE ONLY public.flights_cleaned
 ADD CONSTRAINT fk_flights_cleaned_airline FOREIGN KEY (airline_id) REFERENCES public.airlines(id);
 
@@ -326,53 +328,84 @@ CREATE TABLE public.distance_groups (
 );
 ALTER TABLE ONLY public.distance_groups ADD CONSTRAINT distance_groups_pkey PRIMARY KEY (id);
 
-insert into distance_groups (min, max, label) values (0, 100, '0-100');
-insert into distance_groups (min, max, label) values (101, 200, '101-200');
-insert into distance_groups (min, max, label) values (201, 300, '201-300');
-insert into distance_groups (min, max, label) values (301, 400, '301-400');
-insert into distance_groups (min, max, label) values (401, 500, '401-500');
-insert into distance_groups (min, max, label) values (501, 600, '501-600');
-insert into distance_groups (min, max, label) values (601, 700, '601-700');
-insert into distance_groups (min, max, label) values (701, 800, '701-800');
-insert into distance_groups (min, max, label) values (801, 900, '801-900');
-insert into distance_groups (min, max, label) values (901, 1000, '901-1000');
-insert into distance_groups (min, max, label) values (1001, 1100, '1001-1100');
-insert into distance_groups (min, max, label) values (1101, 1200, '1101-1200');
-insert into distance_groups (min, max, label) values (1201, 1300, '1201-1300');
-insert into distance_groups (min, max, label) values (1301, 1400, '1301-1400');
-insert into distance_groups (min, max, label) values (1401, 1500, '1401-1500');
-insert into distance_groups (min, max, label) values (1501, 1600, '1501-1600');
-insert into distance_groups (min, max, label) values (1601, 1700, '1601-1700');
-insert into distance_groups (min, max, label) values (1701, 1800, '1701-1800');
-insert into distance_groups (min, max, label) values (1801, 1900, '1801-1900');
-insert into distance_groups (min, max, label) values (1901, 2000, '1901-2000');
-insert into distance_groups (min, max, label) values (2001, 2100, '2001-2100');
-insert into distance_groups (min, max, label) values (2101, 2200, '2101-2200');
-insert into distance_groups (min, max, label) values (2201, 2300, '2201-2300');
-insert into distance_groups (min, max, label) values (2301, 2400, '2301-2400');
-insert into distance_groups (min, max, label) values (2401, 2500, '2401-2500');
-insert into distance_groups (min, max, label) values (2501, 2600, '2501-2600');
-insert into distance_groups (min, max, label) values (2601, 2700, '2601-2700');
-insert into distance_groups (min, max, label) values (2701, 2800, '2701-2800');
-insert into distance_groups (min, max, label) values (2801, 2900, '2801-2900');
-insert into distance_groups (min, max, label) values (2901, 3000, '2901-3000');
-insert into distance_groups (min, max, label) values (3001, 3100, '3001-3100');
-insert into distance_groups (min, max, label) values (3101, 3200, '3101-3200');
-insert into distance_groups (min, max, label) values (3201, 3300, '3201-3300');
-insert into distance_groups (min, max, label) values (3301, 3400, '3301-3400');
-insert into distance_groups (min, max, label) values (3401, 3500, '3401-3500');
-insert into distance_groups (min, max, label) values (3501, 3600, '3501-3600');
-insert into distance_groups (min, max, label) values (3601, 3700, '3601-3700');
-insert into distance_groups (min, max, label) values (3701, 3800, '3701-3800');
-insert into distance_groups (min, max, label) values (3801, 3900, '3801-3900');
-insert into distance_groups (min, max, label) values (3901, 4000, '3901-4000');
-insert into distance_groups (min, max, label) values (4001, 4100, '4001-4100');
-insert into distance_groups (min, max, label) values (4101, 4200, '4101-4200');
-insert into distance_groups (min, max, label) values (4201, 4300, '4201-4300');
-insert into distance_groups (min, max, label) values (4301, 4400, '4301-4400');
-insert into distance_groups (min, max, label) values (4401, 4500, '4401-4500');
-insert into distance_groups (min, max, label) values (4501, 4600, '4501-4600');
-insert into distance_groups (min, max, label) values (4601, 4700, '4601-4700');
-insert into distance_groups (min, max, label) values (4701, 4800, '4701-4800');
-insert into distance_groups (min, max, label) values (4801, 4900, '4801-4900');
-insert into distance_groups (min, max, label) values (4901, 5000, '4901-5000');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (0, 100, '0-100');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (101, 200, '101-200');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (201, 300, '201-300');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (301, 400, '301-400');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (401, 500, '401-500');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (501, 600, '501-600');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (601, 700, '601-700');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (701, 800, '701-800');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (801, 900, '801-900');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (901, 1000, '901-1000');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (1001, 1100, '1001-1100');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (1101, 1200, '1101-1200');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (1201, 1300, '1201-1300');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (1301, 1400, '1301-1400');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (1401, 1500, '1401-1500');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (1501, 1600, '1501-1600');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (1601, 1700, '1601-1700');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (1701, 1800, '1701-1800');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (1801, 1900, '1801-1900');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (1901, 2000, '1901-2000');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (2001, 2100, '2001-2100');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (2101, 2200, '2101-2200');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (2201, 2300, '2201-2300');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (2301, 2400, '2301-2400');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (2401, 2500, '2401-2500');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (2501, 2600, '2501-2600');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (2601, 2700, '2601-2700');
+INSERT INTO disptance_groups (MIN, MAX, label) VALUES (2701, 2800, '2701-2800');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (2801, 2900, '2801-2900');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (2901, 3000, '2901-3000');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (3001, 3100, '3001-3100');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (3101, 3200, '3101-3200');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (3201, 3300, '3201-3300');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (3301, 3400, '3301-3400');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (3401, 3500, '3401-3500');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (3501, 3600, '3501-3600');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (3601, 3700, '3601-3700');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (3701, 3800, '3701-3800');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (3801, 3900, '3801-3900');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (3901, 4000, '3901-4000');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (4001, 4100, '4001-4100');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (4101, 4200, '4101-4200');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (4201, 4300, '4201-4300');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (4301, 4400, '4301-4400');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (4401, 4500, '4401-4500');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (4501, 4600, '4501-4600');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (4601, 4700, '4601-4700');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (4701, 4800, '4701-4800');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (4801, 4900, '4801-4900');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (4901, 5000, '4901-5000');
+
+-- Flight Facts
+
+CREATE TABLE public.flight_facts (
+  transactionid INTEGER NOT NULL,
+  distancegroup VARCHAR NOT NULL,
+  depdelaygt15 INT4,
+  nextdayarr INT4
+);
+ALTER TABLE ONLY public.flight_facts ADD CONSTRAINT flight_facts_pkey PRIMARY KEY (transactionid);
+
+INSERT INTO flight_facts (
+  transactionid,
+  distancegroup,
+  depdelaygt15,
+  nextdayarr
+)
+SELECT
+  transactionid,
+  distance_groups.label,
+  cast((depdelay > 15) AS INTEGER),
+  cast((arrtime < deptime) AS INTEGER)
+FROM
+  flights_cleaned
+INNER JOIN
+  distance_groups
+  ON
+    distance_groups.MIN <= flights_cleaned.distance
+  AND
+    distance_groups.MAX >= flights_cleaned.distance
+;
