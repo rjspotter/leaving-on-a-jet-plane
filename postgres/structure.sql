@@ -12,7 +12,6 @@ SET row_security = off;
 
 -- CREATE SCHEMA ingress;
 
-CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA public;
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
@@ -24,6 +23,9 @@ SET default_tablespace = '';
 
 SET default_with_oids = false;
 */
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA public;
+
 CREATE TABLE public.flights (
   TRANSACTIONID INT NOT NULL,
   FLIGHTDATE INTEGER,
@@ -60,117 +62,62 @@ CREATE TABLE public.flights (
 ALTER TABLE ONLY public.flights ADD CONSTRAINT flights_pkey PRIMARY KEY (TRANSACTIONID);
 
 -- Airlines
-CREATE SEQUENCE public.airlines_id_seq
+CREATE SEQUENCE public.dim_airlines_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
 
-CREATE TABLE public.airlines (
-  id INTEGER NOT NULL DEFAULT nextval('airlines_id_seq'),
+CREATE TABLE public.dim_airlines (
+  id INTEGER NOT NULL DEFAULT nextval('dim_airlines_id_seq'),
   code CHARACTER VARYING NOT NULL,
   description CHARACTER VARYING NOT NULL,
   notes CHARACTER VARYING
 );
 
-ALTER TABLE ONLY public.airlines ADD CONSTRAINT airlines_pkey PRIMARY KEY (id);
-
-INSERT
-  INTO public.airlines (
-  code,
-  description,
-  notes)
-SELECT
-  DISTINCT AIRLINECODE,
-  SPLIT_PART(AIRLINENAME, CONCAT(': ', AIRLINECODE), '1'),
-  SPLIT_PART(AIRLINENAME, CONCAT(': ', AIRLINECODE), '2')
-FROM
-  public.flights;
-
+ALTER TABLE ONLY public.dim_airlines ADD CONSTRAINT dim_airlines_pkey PRIMARY KEY (id);
+CREATE INDEX code_of_dim_airlines ON public.dim_airlines USING btree (code);
 
 -- Planes
 
-CREATE SEQUENCE public.planes_id_seq
+CREATE SEQUENCE public.dim_planes_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
 
-CREATE TABLE public.planes (
-  id INTEGER NOT NULL DEFAULT nextval('planes_id_seq'),
+CREATE TABLE public.dim_planes (
+  id INTEGER NOT NULL DEFAULT nextval('dim_planes_id_seq'),
   tail_number CHARACTER VARYING NOT NULL UNIQUE,
   valid BOOLEAN NOT NULL DEFAULT TRUE
 );
-ALTER TABLE ONLY public.planes ADD CONSTRAINT planes_pkey PRIMARY KEY (id);
-
-INSERT INTO public.planes (tail_number)
-SELECT DISTINCT REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1')
-FROM flights WHERE REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1') IS NOT NULL;
-
+ALTER TABLE ONLY public.dim_planes ADD CONSTRAINT dim_planes_pkey PRIMARY KEY (id);
 
 -- Airports
-CREATE SEQUENCE public.airports_id_seq
+
+CREATE SEQUENCE public.dim_airports_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
 
-CREATE TABLE public.airports (
-  id INTEGER NOT NULL DEFAULT nextval('airports_id_seq'),
+CREATE TABLE public.dim_airports (
+  id INTEGER NOT NULL DEFAULT nextval('dim_airports_id_seq'),
   code CHARACTER VARYING NOT NULL UNIQUE,
   name CHARACTER VARYING NOT NULL,
   city CHARACTER VARYING,
   STATE CHARACTER VARYING,
   state_name CHARACTER VARYING
 );
-ALTER TABLE ONLY public.airports ADD CONSTRAINT airports_pkey PRIMARY KEY (id);
-
-INSERT
- INTO public.airports(
- code,
- "name",
- city,
- STATE,
- state_name
-)
-SELECT
- DISTINCT originairportcode,
- SPLIT_PART(origairportname, ': ', '2'),
- origincityname,
- originstate,
- originstatename
-FROM
-  flights
-;
-
-INSERT
- INTO public.airports(
- code,
- NAME,
- city,
- STATE,
- state_name
-)
-SELECT
- DISTINCT destairportcode,
- SPLIT_PART(destairportname, ': ', '2'),
- destcityname,
- deststate,
- deststatename
-FROM
-  flights
-WHERE
-  destairportcode NOT IN
-    (SELECT
-      DISTINCT code FROM airports)
-;
+ALTER TABLE ONLY public.dim_airports ADD CONSTRAINT dim_airports_pkey PRIMARY KEY (id);
+CREATE INDEX code_of_dim_airports ON public.dim_airports USING btree (code);
 
 -- Flights Cleaned
 
-CREATE TABLE public.flights_cleaned (
+CREATE TABLE public.dim_flights (
   TRANSACTIONID INT NOT NULL,
   FLIGHTDATE DATE NOT NULL,
   airline_id INTEGER NOT NULL,
@@ -196,120 +143,20 @@ CREATE TABLE public.flights_cleaned (
   distance_unit VARCHAR NOT NULL
 );
 
-ALTER TABLE ONLY public.flights_cleaned ADD CONSTRAINT flights_cleaned_pkey PRIMARY KEY (transactionid);
+ALTER TABLE ONLY public.dim_flights ADD CONSTRAINT dim_flights_pkey PRIMARY KEY (transactionid);
 
-ALTER TABLE ONLY public.flights_cleaned
-ADD CONSTRAINT fk_flights_cleaned_airline FOREIGN KEY (airline_id) REFERENCES public.airlines(id);
+ALTER TABLE ONLY public.dim_flights
+ADD CONSTRAINT fk_dim_flights_airline FOREIGN KEY (airline_id) REFERENCES public.dim_airlines(id);
 
-ALTER TABLE ONLY public.flights_cleaned
-ADD CONSTRAINT fk_flights_cleaned_plane FOREIGN KEY (plane_id) REFERENCES public.planes(id);
+ALTER TABLE ONLY public.dim_flights
+ADD CONSTRAINT fk_dim_flights_plane FOREIGN KEY (plane_id) REFERENCES public.dim_planes(id);
 
-ALTER TABLE ONLY public.flights_cleaned
-ADD CONSTRAINT fk_flights_cleaned_origin FOREIGN KEY (origin_id) REFERENCES public.airports(id);
+ALTER TABLE ONLY public.dim_flights
+ADD CONSTRAINT fk_dim_flights_origin FOREIGN KEY (origin_id) REFERENCES public.dim_airports(id);
 
-ALTER TABLE ONLY public.flights_cleaned
-ADD CONSTRAINT fk_flights_cleaned_destination FOREIGN KEY (destination_id) REFERENCES public.airports(id);
+ALTER TABLE ONLY public.dim_flights
+ADD CONSTRAINT fk_dim_flights_destination FOREIGN KEY (destination_id) REFERENCES public.dim_airports(id);
 
-INSERT INTO flights_cleaned(
-  TRANSACTIONID,
-  FLIGHTDATE,
-  airline_id,
-  plane_id,
-  flightnumber,
-  origin_id,
-  destination_id,
-  crsdeptime,
-  deptime,
-  depdelay,
-  taxiout,
-  wheelsoff,
-  wheelson,
-  taxiin,
-  crsarrtime,
-  arrtime,
-  arrdelay,
-  crselapsedtime,
-  actualelapsedtime,
-  cancelled,
-  diverted,
-  distance,
-  distance_unit)
-SELECT
-  TRANSACTIONID,
-  TO_DATE(CAST(FLIGHTDATE AS VARCHAR), 'YYYYMMDD'),
-  airlines.id,
-  planes.id,
-  flights.FLIGHTNUM,
-  origin.id,
-  destination.id,
-  CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  CAST( replace( CAST( round( (deptime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  depdelay,
-  taxiout,
-  CAST( replace( CAST( round( (wheelsoff / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  CAST( replace( CAST( round( (wheelson / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  taxiin,
-  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  CAST( replace( CAST( round( (arrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  arrdelay,
-  crselapsedtime,
-  actualelapsedtime,
-  CAST(cancelled AS boolean),
-  CAST(diverted AS BOOLEAN),
-  CAST(SPLIT_PART(distance, ' ', '1') AS INTEGER),
-  SPLIT_PART(distance, ' ', '2')
-FROM
-  public.flights
-  LEFT OUTER JOIN public.airlines ON public.flights.AIRLINECODE = public.airlines.CODE
-  LEFT OUTER JOIN public.planes ON REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1') = planes.tail_number
-  LEFT OUTER JOIN airports AS origin ON origin.code = flights.originairportcode
-  LEFT OUTER JOIN airports AS destination ON destination.code = flights.destairportcode
-WHERE
-  CAST(cancelled AS BOOLEAN) IS FALSE
-;
-
-
-INSERT INTO flights_cleaned(
-  TRANSACTIONID,
-  FLIGHTDATE,
-  airline_id,
-  plane_id,
-  flightnumber,
-  origin_id,
-  destination_id,
-  crsdeptime,
-  crsarrtime,
-  arrdelay,
-  crselapsedtime,
-  cancelled,
-  diverted,
-  distance,
-  distance_unit)
-SELECT
-  TRANSACTIONID,
-  TO_DATE(CAST(FLIGHTDATE AS VARCHAR), 'YYYYMMDD'),
-  airlines.id,
-  planes.id,
-  flights.FLIGHTNUM,
-  origin.id,
-  destination.id,
-  CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  arrdelay,
-  crselapsedtime,
-  CAST(cancelled AS boolean),
-  CAST(diverted AS BOOLEAN),
-  CAST(SPLIT_PART(distance, ' ', '1') AS INTEGER),
-  SPLIT_PART(distance, ' ', '2')
-FROM
-  public.flights
-  LEFT OUTER JOIN public.airlines ON public.flights.AIRLINECODE = public.airlines.CODE
-  LEFT OUTER JOIN public.planes ON REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', ''), '^N(.*)', '\1') = planes.tail_number
-  LEFT OUTER JOIN airports AS origin ON origin.code = flights.originairportcode
-  LEFT OUTER JOIN airports AS destination ON destination.code = flights.destairportcode
-WHERE
-  CAST(cancelled AS BOOLEAN) IS TRUE
-;
 
 -- Distance Groups
 
@@ -355,7 +202,7 @@ INSERT INTO distance_groups (MIN, MAX, label) VALUES (2301, 2400, '2301-2400');
 INSERT INTO distance_groups (MIN, MAX, label) VALUES (2401, 2500, '2401-2500');
 INSERT INTO distance_groups (MIN, MAX, label) VALUES (2501, 2600, '2501-2600');
 INSERT INTO distance_groups (MIN, MAX, label) VALUES (2601, 2700, '2601-2700');
-INSERT INTO disptance_groups (MIN, MAX, label) VALUES (2701, 2800, '2701-2800');
+INSERT INTO distance_groups (MIN, MAX, label) VALUES (2701, 2800, '2701-2800');
 INSERT INTO distance_groups (MIN, MAX, label) VALUES (2801, 2900, '2801-2900');
 INSERT INTO distance_groups (MIN, MAX, label) VALUES (2901, 3000, '2901-3000');
 INSERT INTO distance_groups (MIN, MAX, label) VALUES (3001, 3100, '3001-3100');
@@ -381,58 +228,38 @@ INSERT INTO distance_groups (MIN, MAX, label) VALUES (4901, 5000, '4901-5000');
 
 -- Flight Facts
 
-CREATE TABLE public.flight_facts (
+CREATE TABLE public.fact_flights (
   transactionid INTEGER NOT NULL,
   distancegroup VARCHAR NOT NULL,
   depdelaygt15 INT4,
   nextdayarr INT4
 );
-ALTER TABLE ONLY public.flight_facts ADD CONSTRAINT flight_facts_pkey PRIMARY KEY (transactionid);
+ALTER TABLE ONLY public.fact_flights ADD CONSTRAINT fact_flights_pkey PRIMARY KEY (transactionid);
 
-INSERT INTO flight_facts (
-  transactionid,
-  distancegroup,
-  depdelaygt15,
-  nextdayarr
-)
-SELECT
-  transactionid,
-  distance_groups.label,
-  cast((depdelay > 15) AS INTEGER),
-  cast((arrtime < deptime) AS INTEGER)
-FROM
-  flights_cleaned
-INNER JOIN
-  distance_groups
-  ON
-    distance_groups.MIN <= flights_cleaned.distance
-  AND
-    distance_groups.MAX >= flights_cleaned.distance
-;
-
+-- final view
 
 CREATE VIEW
   vw_flights
 AS
 SELECT
-  flights_cleaned.transactionid,
-  flight_facts.distancegroup,
-  flight_facts.DEPDELAYGT15,
-  flight_facts.NEXTDAYARR,
-  airlines.description AS AIRLINENAME,
+  dim_flights.transactionid,
+  fact_flights.distancegroup,
+  fact_flights.DEPDELAYGT15,
+  fact_flights.NEXTDAYARR,
+  dim_airlines.description AS AIRLINENAME,
   origin.NAME AS ORIGAIRPORTNAME,
   destination.NAME AS DESTAIRPORTNAME,
-  concat('N', planes.tail_number) AS TAILNUM
+  concat('N', dim_planes.tail_number) AS TAILNUM
 FROM
-  flights_cleaned
+  dim_flights
 INNER JOIN
-  flight_facts ON flights_cleaned.transactionid = flight_facts.transactionid
+  fact_flights ON dim_flights.transactionid = fact_flights.transactionid
 LEFT JOIN
-  airlines ON flights_cleaned.airline_id = airlines.id
+  dim_airlines ON dim_flights.airline_id = dim_airlines.id
 LEFT JOIN
-  planes ON flights_cleaned.plane_id = planes.id
+  dim_planes ON dim_flights.plane_id = dim_planes.id
 LEFT JOIN
-  airports AS origin  ON flights_cleaned.origin_id = origin.id
+  dim_airports AS origin  ON dim_flights.origin_id = origin.id
 LEFT JOIN
-  airports AS destination  ON flights_cleaned.destination_id = destination.id
+  dim_airports AS destination  ON dim_flights.destination_id = destination.id
 ;

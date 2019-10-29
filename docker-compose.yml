@@ -41,11 +41,8 @@ services:
   postgres:
     hostname: postgres
     container_name: postgres
-    image: postgres:11.5
+    build: ./postgres
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: simple

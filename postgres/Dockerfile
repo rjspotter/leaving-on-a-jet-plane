@@ -1,0 +1,9 @@
+FROM postgres:11.5
+
+ENV POSTGRES_USER postgres
+ENV POSTGRES_PASSWORD simple
+ENV POSTGRES_DB warehouse
+
+COPY structure.sql /docker-entrypoint-initdb.d/001_structure.sql
+COPY process.sql /docker-entrypoint-initdb.d/002_process.sql
+
