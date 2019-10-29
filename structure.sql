@@ -409,3 +409,30 @@ INNER JOIN
   AND
     distance_groups.MAX >= flights_cleaned.distance
 ;
+
+
+CREATE VIEW
+  vw_flights
+AS
+SELECT
+  flights_cleaned.transactionid,
+  flight_facts.distancegroup,
+  flight_facts.DEPDELAYGT15,
+  flight_facts.NEXTDAYARR,
+  airlines.description AS AIRLINENAME,
+  origin.NAME AS ORIGAIRPORTNAME,
+  destination.NAME AS DESTAIRPORTNAME,
+  concat('N', planes.tail_number) AS TAILNUM
+FROM
+  flights_cleaned
+INNER JOIN
+  flight_facts ON flights_cleaned.transactionid = flight_facts.transactionid
+LEFT JOIN
+  airlines ON flights_cleaned.airline_id = airlines.id
+LEFT JOIN
+  planes ON flights_cleaned.plane_id = planes.id
+LEFT JOIN
+  airports AS origin  ON flights_cleaned.origin_id = origin.id
+LEFT JOIN
+  airports AS destination  ON flights_cleaned.destination_id = destination.id
+;
