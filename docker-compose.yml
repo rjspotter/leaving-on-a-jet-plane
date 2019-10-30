@@ -2,16 +2,13 @@ version: '3'
 volumes:
   file-data:
   pgdata:
-  nifi:
-  omnidb:
 services:
   volumes-provisioner:
     image: hasnat/volumes-provisioner
     environment:
-      PROVISION_DIRECTORIES: "0:0:0777:/data;0:0:0777:/nifi"
+      PROVISION_DIRECTORIES: "0:0:0777:/data"
     volumes:
       - file-data/:/data
-      - nifi:/nifi
     network_mode: none
   nifi:
     hostname: nifi
@@ -36,8 +33,12 @@ services:
     ports:
       - "8081:8080"
       - "25482:25482"
-    volumes:
-      - omnidb:/etc/omnidb
+  superset:
+    hostname: superset
+    container_name: superset
+    image: 'amancevice/superset:0.34.1'
+    ports:
+      - "8088:8088"
   postgres:
     hostname: postgres
     container_name: postgres

@@ -1,15 +1,5 @@
-CREATE FUNCTION dimensionalize_flights()
-RETURNS TRIGGER AS
-$BODY$
-BEGIN
+-- Airlines dim_airlines
 
--- Airlines
-
-INSERT
-  INTO dim_airlines (
-  code,
-  description,
-  notes)
 SELECT
   DISTINCT AIRLINECODE AS code,
   SPLIT_PART(AIRLINENAME, CONCAT(': ', AIRLINECODE), '1') AS description,
@@ -20,10 +10,8 @@ WHERE
   flights.airlinecode NOT IN (SELECT code FROM dim_airlines)
 ;
 
--- Planes
+-- Planes dim_planes
 
-INSERT
-  INTO dim_planes (tail_number)
 SELECT
   DISTINCT REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]+', '', 'g'), '^N(.*)', '\1')
   AS tail_number
@@ -35,16 +23,19 @@ AND
   REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', '', 'g'), '^N(.*)', '\1') NOT IN (SELECT tail_number FROM dim_planes)
 ;
 
--- Airports
+SELECT
+  DISTINCT REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]+', '', 'g'), '^N(.*)', '\1')
+  AS tail_number
+FROM
+  flights
+WHERE
+  REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', '', 'g'), '^N(.*)', '\1') IS NOT NULL
+AND
+  REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', '', 'g'), '^N(.*)', '\1') NOT IN (SELECT tail_number FROM dim_planes)
+;
 
-INSERT
- INTO dim_airports(
- code,
- "name",
- city,
- STATE,
- state_name
-)
+-- Airports dim_airports
+
 SELECT
  DISTINCT originairportcode AS code,
  SPLIT_PART(origairportname, ': ', '2') AS "name",
@@ -55,16 +46,9 @@ FROM
   flights
 WHERE
   originairportcode NOT IN (SELECT DISTINCT code FROM dim_airports)
-;
 
-INSERT
- INTO dim_airports(
- code,
- NAME,
- city,
- STATE,
- state_name
-)
+UNION
+
 SELECT
  DISTINCT destairportcode AS code,
  SPLIT_PART(destairportname, ': ', '2') AS "name",
@@ -77,56 +61,32 @@ WHERE
   destairportcode NOT IN (SELECT DISTINCT code FROM dim_airports)
 ;
 
--- Flights
+-- Flights dim_flights
 
-INSERT INTO dim_flights(
-  TRANSACTIONID,
-  FLIGHTDATE,
-  airline_id,
-  plane_id,
-  flightnumber,
-  origin_id,
-  destination_id,
-  crsdeptime,
-  deptime,
-  depdelay,
-  taxiout,
-  wheelsoff,
-  wheelson,
-  taxiin,
-  crsarrtime,
-  arrtime,
-  arrdelay,
-  crselapsedtime,
-  actualelapsedtime,
-  cancelled,
-  diverted,
-  distance,
-  distance_unit)
 SELECT
   TRANSACTIONID,
-  TO_DATE(CAST(FLIGHTDATE AS VARCHAR), 'YYYYMMDD'),
-  dim_airlines.id,
-  dim_planes.id,
-  flights.FLIGHTNUM,
-  origin.id,
-  destination.id,
-  CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  CAST( replace( CAST( round( (deptime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
+  TO_DATE(CAST(FLIGHTDATE AS VARCHAR), 'YYYYMMDD') AS FLIGHTDATE,
+  dim_airlines.id AS airline_id,
+  dim_planes.id AS plane_id,
+  flights.FLIGHTNUM AS flightnumber,
+  origin.id AS origin_id,
+  destination.id AS destination_id,
+  CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS crsdeptime,
+  CAST( replace( CAST( round( (deptime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS deptime,
   depdelay,
   taxiout,
-  CAST( replace( CAST( round( (wheelsoff / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  CAST( replace( CAST( round( (wheelson / 100.0), 2) AS TEXT), '.', ':') AS TIME),
+  CAST( replace( CAST( round( (wheelsoff / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS wheelsoff,
+  CAST( replace( CAST( round( (wheelson / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS wheelson,
   taxiin,
-  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  CAST( replace( CAST( round( (arrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
+  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS crsarrtime,
+  CAST( replace( CAST( round( (arrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS arrtime,
   arrdelay,
   crselapsedtime,
   actualelapsedtime,
-  CAST(cancelled AS boolean),
-  CAST(diverted AS BOOLEAN),
-  CAST(SPLIT_PART(distance, ' ', '1') AS INTEGER),
-  SPLIT_PART(distance, ' ', '2')
+  CAST(cancelled AS BOOLEAN) AS cancelled,
+  CAST(diverted AS BOOLEAN) AS diverted,
+  CAST(SPLIT_PART(distance, ' ', '1') AS INTEGER) AS distance,
+  SPLIT_PART(distance, ' ', '2') AS distnace_unit
 FROM
   flights
   LEFT OUTER JOIN dim_airlines ON flights.AIRLINECODE = dim_airlines.CODE
@@ -140,38 +100,22 @@ AND
 ;
 
 
-INSERT INTO dim_flights(
-  TRANSACTIONID,
-  FLIGHTDATE,
-  airline_id,
-  plane_id,
-  flightnumber,
-  origin_id,
-  destination_id,
-  crsdeptime,
-  crsarrtime,
-  arrdelay,
-  crselapsedtime,
-  cancelled,
-  diverted,
-  distance,
-  distance_unit)
 SELECT
   TRANSACTIONID,
-  TO_DATE(CAST(FLIGHTDATE AS VARCHAR), 'YYYYMMDD'),
+  TO_DATE(CAST(FLIGHTDATE AS VARCHAR), 'YYYYMMDD') AS FLIGHTDATE,
   dim_airlines.id,
   dim_planes.id,
   flights.FLIGHTNUM,
   origin.id,
   destination.id,
-  CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
-  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME),
+  CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS crsdeptime,
+  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS crsarrtime,
   arrdelay,
   crselapsedtime,
-  CAST(cancelled AS boolean),
-  CAST(diverted AS BOOLEAN),
-  CAST(SPLIT_PART(distance, ' ', '1') AS INTEGER),
-  SPLIT_PART(distance, ' ', '2')
+  CAST(cancelled AS BOOLEAN) AS cancelled,
+  CAST(diverted AS BOOLEAN)AS diverted,
+  CAST(SPLIT_PART(distance, ' ', '1') AS INTEGER) AS distance,
+  SPLIT_PART(distance, ' ', '2') AS distance_unit
 FROM
   flights
   LEFT OUTER JOIN dim_airlines ON flights.AIRLINECODE = dim_airlines.CODE
@@ -184,9 +128,9 @@ AND
   transactionid NOT IN (SELECT transactionid FROM dim_flights)
 ;
 
---- Facts
+--- Facts fact_flights
 
-INSERT INTO fact_flights (
+INSERT INTO  (
   transactionid,
   distancegroup,
   depdelaygt15,
@@ -194,9 +138,9 @@ INSERT INTO fact_flights (
 )
 SELECT
   transactionid,
-  distance_groups.label,
-  cast((depdelay > 15) AS INTEGER),
-  cast((arrtime < deptime) AS INTEGER)
+  distance_groups.label AS distancegroup,
+  cast((depdelay > 15) AS INTEGER) AS depdelaygt15,
+  cast((arrtime < deptime) AS INTEGER) AS nextdayarr
 FROM
   dim_flights
 INNER JOIN
@@ -207,18 +151,4 @@ INNER JOIN
     distance_groups.MAX >= dim_flights.distance
 WHERE
   transactionid NOT IN (SELECT transactionid FROM fact_flights)
-;
-
-RETURN NULL;
-END;
-$BODY$
-LANGUAGE 'plpgsql'
-;
-
-CREATE CONSTRAINT TRIGGER new_flights
-AFTER INSERT
-ON flights
-DEFERRABLE
-FOR EACH ROW
-  EXECUTE PROCEDURE dimensionalize_flights()
 ;

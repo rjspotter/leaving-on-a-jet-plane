@@ -1,29 +1,3 @@
-/*
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
-
--- CREATE SCHEMA ingress;
-
-
-CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
-
-SET default_tablespace = '';
-
-SET default_with_oids = false;
-*/
-
 CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA public;
 
 CREATE TABLE public.flights (
@@ -140,7 +114,7 @@ CREATE TABLE public.dim_flights (
   cancelled BOOLEAN NOT NULL,
   diverted BOOLEAN NOT NULL,
   distance INTEGER NOT NULL,
-  distance_unit VARCHAR NOT NULL
+  distance_unit VARCHAR
 );
 
 ALTER TABLE ONLY public.dim_flights ADD CONSTRAINT dim_flights_pkey PRIMARY KEY (transactionid);
