@@ -11,9 +11,9 @@ INSERT
   description,
   notes)
 SELECT
-  DISTINCT AIRLINECODE,
-  SPLIT_PART(AIRLINENAME, CONCAT(': ', AIRLINECODE), '1'),
-  SPLIT_PART(AIRLINENAME, CONCAT(': ', AIRLINECODE), '2')
+  DISTINCT AIRLINECODE AS code,
+  SPLIT_PART(AIRLINENAME, CONCAT(': ', AIRLINECODE), '1') AS description,
+  SPLIT_PART(AIRLINENAME, CONCAT(': ', AIRLINECODE), '2') AS notes
 FROM
   flights
 WHERE
@@ -26,6 +26,7 @@ INSERT
   INTO dim_planes (tail_number)
 SELECT
   DISTINCT REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]+', '', 'g'), '^N(.*)', '\1')
+  AS tail_number
 FROM
   flights
 WHERE
@@ -45,11 +46,11 @@ INSERT
  state_name
 )
 SELECT
- DISTINCT originairportcode,
- SPLIT_PART(origairportname, ': ', '2'),
- origincityname,
- originstate,
- originstatename
+ DISTINCT originairportcode AS code,
+ SPLIT_PART(origairportname, ': ', '2') AS "name",
+ origincityname AS city,
+ originstate AS state,
+ originstatename AS state_name
 FROM
   flights
 WHERE
@@ -65,11 +66,11 @@ INSERT
  state_name
 )
 SELECT
- DISTINCT destairportcode,
- SPLIT_PART(destairportname, ': ', '2'),
- destcityname,
- deststate,
- deststatename
+ DISTINCT destairportcode AS code,
+ SPLIT_PART(destairportname, ': ', '2') AS "name",
+ destcityname AS city,
+ deststate AS state,
+ deststatename AS state_name
 FROM
   flights
 WHERE
@@ -214,8 +215,10 @@ $BODY$
 LANGUAGE 'plpgsql'
 ;
 
-CREATE TRIGGER new_flights
-AFTER INSERT ON flights
-FOR EACH STATEMENT
-EXECUTE PROCEDURE dimensionalize_flights()
+CREATE CONSTRAINT TRIGGER new_flights
+AFTER INSERT
+ON flights
+DEFERRABLE
+FOR EACH ROW
+  EXECUTE PROCEDURE dimensionalize_flights()
 ;
