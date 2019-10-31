@@ -1,2 +1,2 @@
-CREATE DATABASE warehouse;
-GRANT ALL PRIVILEGES ON DATABASE warehouse TO postgres;
+CREATE DATABASE superset;
+GRANT ALL PRIVILEGES ON DATABASE superset TO postgres;

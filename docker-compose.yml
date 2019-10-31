@@ -39,6 +39,11 @@ services:
     image: 'amancevice/superset:0.34.1'
     ports:
       - "8088:8088"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./superset_config.py:/etc/superset/superset_config.py
   postgres:
     hostname: postgres
     container_name: postgres
