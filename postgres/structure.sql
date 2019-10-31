@@ -114,7 +114,7 @@ CREATE TABLE public.dim_flights (
   cancelled BOOLEAN NOT NULL,
   diverted BOOLEAN NOT NULL,
   distance INTEGER NOT NULL,
-  distance_unit VARCHAR
+  distance_unit VARCHAR DEFAULT 'miles'
 );
 
 ALTER TABLE ONLY public.dim_flights ADD CONSTRAINT dim_flights_pkey PRIMARY KEY (transactionid);
@@ -218,12 +218,20 @@ AS
 SELECT
   dim_flights.transactionid,
   fact_flights.distancegroup,
-  fact_flights.DEPDELAYGT15,
-  fact_flights.NEXTDAYARR,
+  COALESCE(fact_flights.DEPDELAYGT15, 0) AS DEPDELAYGT15,
+  COALESCE(fact_flights.NEXTDAYARR, 0) AS NEXTDAYARR,
   dim_airlines.description AS AIRLINENAME,
   origin.NAME AS ORIGAIRPORTNAME,
   destination.NAME AS DESTAIRPORTNAME,
-  concat('N', dim_planes.tail_number) AS TAILNUM
+  concat('N', COALESCE(dim_planes.tail_number, 'UNKNOWN')) AS TAILNUM,
+  COALESCE(taxiout, 0) AS taxiout,
+  COALESCE(taxiin, 0) AS taxiin,
+  crsdeptime,
+  deptime,
+  crsarrtime,
+  arrtime,
+  distance,
+  distance_unit
 FROM
   dim_flights
 INNER JOIN
