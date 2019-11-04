@@ -11,12 +11,15 @@ to update every 30s so watch the in/out byte counts
 
 Once that's complete you can do exploration with Superset
 `http://data-drone:8088/login/`
+```
 u: admin
 p: simple
+```
 
 I haven't built any dashboards or charts successfully yet but, you can Use the
 SQL lab to poke around
 
+The database you want to look at is called 'warehouse' you can ignore 'main' and 'example'
 ## Notes
 
 Not all the tail numbers are valid
