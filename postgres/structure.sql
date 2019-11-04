@@ -1,4 +1,37 @@
-CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA PUBLIC;
+
+--
+-- Common Functions
+--
+
+CREATE OR REPLACE FUNCTION
+  integer_time_convert(time_integer INTEGER)
+RETURNS
+  TIME
+AS
+  $$
+    select CAST( replace( CAST( round( ($1 / 100.0), 2) AS TEXT), '.', ':') AS TIME);
+  $$
+LANGUAGE SQL;
+
+
+-- upcase
+-- remove anything NOT alpha NUMERIC
+-- strip N OFF the front
+-- replace O & I WITH 0 & 1 respectively
+CREATE OR REPLACE FUNCTION
+  cleaned_tailnum(tailnum_string VARCHAR)
+RETURNS
+  VARCHAR
+AS
+$$
+SELECT REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE(UPPER($1), '[^A-Z0-9]+', '', 'g'), '^N(.*)', '\1'), 'O', '0', 'g'), 'I', '1', 'g');
+$$
+LANGUAGE SQL;
+
+
+
+-- flights lake
 
 CREATE TABLE public.flights (
   TRANSACTIONID INT NOT NULL,
@@ -114,7 +147,7 @@ CREATE TABLE public.dim_flights (
   cancelled BOOLEAN NOT NULL,
   diverted BOOLEAN NOT NULL,
   distance INTEGER NOT NULL,
-  distance_unit VARCHAR DEFAULT 'miles'
+  distance_unit VARCHAR NOT NULL DEFAULT 'miles'
 );
 
 ALTER TABLE ONLY public.dim_flights ADD CONSTRAINT dim_flights_pkey PRIMARY KEY (transactionid);
@@ -131,76 +164,25 @@ ADD CONSTRAINT fk_dim_flights_origin FOREIGN KEY (origin_id) REFERENCES public.d
 ALTER TABLE ONLY public.dim_flights
 ADD CONSTRAINT fk_dim_flights_destination FOREIGN KEY (destination_id) REFERENCES public.dim_airports(id);
 
-
--- Distance Groups
-
-CREATE SEQUENCE public.distance_groups_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-CREATE TABLE public.distance_groups (
-  id INTEGER NOT NULL DEFAULT nextval('distance_groups_id_seq'),
-  MIN INTEGER NOT NULL,
-  MAX INTEGER NOT NULL,
-  label VARCHAR NOT NULL
-);
-ALTER TABLE ONLY public.distance_groups ADD CONSTRAINT distance_groups_pkey PRIMARY KEY (id);
-
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (0, 100, '0-100');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (101, 200, '101-200');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (201, 300, '201-300');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (301, 400, '301-400');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (401, 500, '401-500');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (501, 600, '501-600');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (601, 700, '601-700');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (701, 800, '701-800');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (801, 900, '801-900');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (901, 1000, '901-1000');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (1001, 1100, '1001-1100');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (1101, 1200, '1101-1200');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (1201, 1300, '1201-1300');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (1301, 1400, '1301-1400');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (1401, 1500, '1401-1500');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (1501, 1600, '1501-1600');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (1601, 1700, '1601-1700');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (1701, 1800, '1701-1800');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (1801, 1900, '1801-1900');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (1901, 2000, '1901-2000');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (2001, 2100, '2001-2100');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (2101, 2200, '2101-2200');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (2201, 2300, '2201-2300');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (2301, 2400, '2301-2400');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (2401, 2500, '2401-2500');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (2501, 2600, '2501-2600');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (2601, 2700, '2601-2700');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (2701, 2800, '2701-2800');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (2801, 2900, '2801-2900');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (2901, 3000, '2901-3000');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (3001, 3100, '3001-3100');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (3101, 3200, '3101-3200');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (3201, 3300, '3201-3300');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (3301, 3400, '3301-3400');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (3401, 3500, '3401-3500');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (3501, 3600, '3501-3600');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (3601, 3700, '3601-3700');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (3701, 3800, '3701-3800');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (3801, 3900, '3801-3900');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (3901, 4000, '3901-4000');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (4001, 4100, '4001-4100');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (4101, 4200, '4101-4200');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (4201, 4300, '4201-4300');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (4301, 4400, '4301-4400');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (4401, 4500, '4401-4500');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (4501, 4600, '4501-4600');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (4601, 4700, '4601-4700');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (4701, 4800, '4701-4800');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (4801, 4900, '4801-4900');
-INSERT INTO distance_groups (MIN, MAX, label) VALUES (4901, 5000, '4901-5000');
-
 -- Flight Facts
+
+CREATE OR REPLACE FUNCTION
+  bucket(val INTEGER)
+RETURNS
+  VARCHAR
+AS
+  $$
+  WITH
+    coersion
+  AS
+    (SELECT CAST(CAST(($1 - 1) AS DECIMAL) / 100 AS INTEGER) * 100 AS bucket_int)
+  SELECT
+    concat(CAST((coersion.bucket_int + 1) AS VARCHAR), '-', CAST((coersion.bucket_int + 100) AS VARCHAR))
+  FROM
+    coersion
+  $$
+LANGUAGE SQL;
+
 
 CREATE TABLE public.fact_flights (
   transactionid INTEGER NOT NULL,

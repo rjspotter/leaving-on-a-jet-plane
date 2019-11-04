@@ -13,25 +13,14 @@ WHERE
 -- Planes dim_planes
 
 SELECT
-  DISTINCT REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]+', '', 'g'), '^N(.*)', '\1')
+  DISTINCT cleaned_tailnum(tailnum)
   AS tail_number
 FROM
   flights
 WHERE
-  REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', '', 'g'), '^N(.*)', '\1') IS NOT NULL
+  cleaned_tailnum(tailnum) IS NOT NULL
 AND
-  REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', '', 'g'), '^N(.*)', '\1') NOT IN (SELECT tail_number FROM dim_planes)
-;
-
-SELECT
-  DISTINCT REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]+', '', 'g'), '^N(.*)', '\1')
-  AS tail_number
-FROM
-  flights
-WHERE
-  REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', '', 'g'), '^N(.*)', '\1') IS NOT NULL
-AND
-  REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]', '', 'g'), '^N(.*)', '\1') NOT IN (SELECT tail_number FROM dim_planes)
+  cleaned_tailnum(tailnum) NOT IN (SELECT tail_number FROM dim_planes)
 ;
 
 -- Airports dim_airports
@@ -71,15 +60,15 @@ SELECT
   flights.FLIGHTNUM AS flightnumber,
   origin.id AS origin_id,
   destination.id AS destination_id,
-  CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS crsdeptime,
-  CAST( replace( CAST( round( (deptime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS deptime,
+  integer_time_convert(crsdeptime) AS crsdeptime,
+  integer_time_convert(deptime) AS deptime,
   depdelay,
   taxiout,
-  CAST( replace( CAST( round( (wheelsoff / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS wheelsoff,
-  CAST( replace( CAST( round( (wheelson / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS wheelson,
+  integer_time_convert(wheelsoff) AS wheelsoff,
+  integer_time_convert(wheelson) AS wheelson,
   taxiin,
-  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS crsarrtime,
-  CAST( replace( CAST( round( (arrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS arrtime,
+  integer_time_convert(crsarrtime) AS crsarrtime,
+  integer_time_convert(arrtime) AS arrtime,
   arrdelay,
   crselapsedtime,
   actualelapsedtime,
@@ -90,7 +79,10 @@ SELECT
 FROM
   flights
   LEFT OUTER JOIN dim_airlines ON flights.AIRLINECODE = dim_airlines.CODE
-  LEFT OUTER JOIN dim_planes ON REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]+', '', 'g'), '^N(.*)', '\1') = dim_planes.tail_number
+    LEFT OUTER JOIN
+    dim_planes
+  ON
+    cleaned_tailnum(tailnum) = dim_planes.tail_number
   LEFT OUTER JOIN dim_airports AS origin ON origin.code = flights.originairportcode
   LEFT OUTER JOIN dim_airports AS destination ON destination.code = flights.destairportcode
 WHERE
@@ -106,8 +98,8 @@ SELECT
   flights.FLIGHTNUM AS flightnumber,
   origin.id AS origin_id,
   destination.id AS destination_id,
-  CAST( replace( CAST( round( (crsdeptime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS crsdeptime,
-  CAST( replace( CAST( round( (crsarrtime / 100.0), 2) AS TEXT), '.', ':') AS TIME) AS crsarrtime,
+  integer_time_convert(crsdeptime) AS crsdeptime,
+  integer_time_convert(crsarrtime) AS crsarrtime,
   crselapsedtime,
   CAST(cancelled AS BOOLEAN) AS cancelled,
   CAST(diverted AS BOOLEAN) AS diverted,
@@ -118,7 +110,8 @@ FROM
   LEFT OUTER JOIN dim_airlines ON flights.AIRLINECODE = dim_airlines.CODE
   LEFT OUTER JOIN
     dim_planes
-    ON REGEXP_REPLACE(REGEXP_REPLACE(UPPER(TAILNUM), '[^A-Z0-9]+', '', 'g'), '^N(.*)', '\1') = dim_planes.tail_number
+  ON
+    cleaned_tailnum(tailnum) = dim_planes.tail_number
   LEFT OUTER JOIN dim_airports AS origin ON origin.code = flights.originairportcode
   LEFT OUTER JOIN dim_airports AS destination ON destination.code = flights.destairportcode
 WHERE
@@ -135,17 +128,11 @@ INSERT INTO  (
 )
 SELECT
   transactionid,
-  distance_groups.label AS distancegroup,
+  bucket(distance) AS distancegroup,
   cast((depdelay > 15) AS INTEGER) AS depdelaygt15,
   cast((arrtime < deptime) AS INTEGER) AS nextdayarr
 FROM
   dim_flights
-INNER JOIN
-  distance_groups
-  ON
-    distance_groups.MIN <= dim_flights.distance
-  AND
-    distance_groups.MAX >= dim_flights.distance
 WHERE
   transactionid NOT IN (SELECT transactionid FROM fact_flights)
 ;
