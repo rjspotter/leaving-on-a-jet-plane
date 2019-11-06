@@ -39,3 +39,6 @@ The fact_flights table has the nextdayarr but, may not be 100% accurate because
 I don't have timezone data available in this set.
 
 the distance unit seemed to always be miles or null so, I defaulted to miles
+
+## Presentation
+https://docs.google.com/presentation/d/18x8XFtYZwyxg4O4rBM9He34Lz5S6_cMciXX0XEf1ZCQ/edit?usp=sharing
